@@ -1,0 +1,62 @@
+relationships:
+  # ECS Container hosts APM Application relationship via container.id
+  - name: ecsContainerHostsApmApplication
+    version: "1"
+    origins:
+      - OpenTelemetry
+    conditions:
+      - attribute: eventType
+        anyOf: ["Metric", "Span"]
+      - attribute: instrumentation.provider
+        anyOf: ["opentelemetry"]
+      - attribute: cloud.platform
+        anyOf: ["aws_ecs"]
+      - attribute: container.id
+        present: true
+    relationship:
+      expires: PT75M
+      relationshipType: HOSTS
+      source:
+        lookupGuid:
+          candidateCategory: CONTAINER
+          fields:
+            - field: containerId
+              attribute: container.id
+      target:
+        lookupGuid:
+          candidateCategory: APMAPPLICATION
+          fields:
+            - field: containerId
+              attribute: container.id
+
+  # Alternative relationship via ECS task ARN (if container.id doesn't work)
+  - name: ecsContainerHostsApmApplicationByTask
+    version: "1"
+    origins:
+      - OpenTelemetry
+    conditions:
+      - attribute: eventType
+        anyOf: ["Metric", "Span"]
+      - attribute: instrumentation.provider
+        anyOf: ["opentelemetry"]
+      - attribute: cloud.platform
+        anyOf: ["aws_ecs"]
+      - attribute: aws.ecs.task.arn
+        present: true
+      - attribute: service.name
+        present: true
+    relationship:
+      expires: PT75M
+      relationshipType: HOSTS
+      source:
+        lookupGuid:
+          candidateCategory: CONTAINER
+          fields:
+            - field: awsEcsTaskArn
+              attribute: aws.ecs.task.arn
+      target:
+        lookupGuid:
+          candidateCategory: APMAPPLICATION
+          fields:
+            - field: containerId
+              attribute: container.id
